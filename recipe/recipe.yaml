@@ -15,33 +15,24 @@ build:
     env:
       CARGO_PROFILE_RELEASE_LTO: fat
       CARGO_PROFILE_RELEASE_STRIP: symbols
+    interpreter: nu
     content:
-      - cd crates/air
-      - if: unix
-        then:
-          - cargo auditable install --path=. --root="$PREFIX" --no-track --locked --bins
-          # generate shell completions
-          - if: build_platform == host_platform
-            then:
-              - mkdir -p "$PREFIX"/share/bash-completion/completions "$PREFIX"/share/fish/vendor_completions.d "$PREFIX"/share/zsh/site-functions
-              - '"$PREFIX"/bin/air generate-shell-completion bash > "$PREFIX"/share/bash-completion/completions/air'
-              - '"$PREFIX"/bin/air generate-shell-completion fish > "$PREFIX"/share/fish/vendor_completions.d/air.fish'
-              - '"$PREFIX"/bin/air generate-shell-completion zsh  > "$PREFIX"/share/zsh/site-functions/_air'
+      - let prefix = $env.LIBRARY_PREFIX? | default $env.PREFIX
+      # work around Windows MAX_PATH (260 char) limitation with cargo/libgit2, cf. https://github.com/libgit2/libgit2/blob/main/docs/win32-longpaths.md
       - if: win
-        then:
-          # work around Windows MAX_PATH (260 char) limitation with cargo/libgit2, cf. https://github.com/libgit2/libgit2/blob/main/docs/win32-longpaths.md
-          - set "CARGO_HOME=C:\.cargo"
-          - cargo auditable install --path=. --root="%LIBRARY_PREFIX%" --no-track --locked --bins
-          # generate shell completions
-          - if: build_platform == host_platform
-            then:
-              - mkdir "%LIBRARY_PREFIX%"\share\bash-completion\completions
-              - mkdir "%LIBRARY_PREFIX%"\share\fish\vendor_completions.d
-              - mkdir "%LIBRARY_PREFIX%"\share\zsh\site-functions
-              - '"%LIBRARY_BIN%"\air.exe generate-shell-completion bash > "%LIBRARY_PREFIX%"\share\bash-completion\completions\air'
-              - '"%LIBRARY_BIN%"\air.exe generate-shell-completion fish > "%LIBRARY_PREFIX%"\share\fish\vendor_completions.d\air.fish'
-              - '"%LIBRARY_BIN%"\air.exe generate-shell-completion zsh  > "%LIBRARY_PREFIX%"\share\zsh\site-functions\_air'
+        then: $env.CARGO_HOME = 'C:\.cargo'
+      # build main app and generate license data
+      - cd crates/air
+      - cargo auditable install --path=. --root=($prefix) --no-track --locked --bins
       - cargo-bundle-licenses --format=yaml --output=../../THIRDPARTY.yml
+      # generate shell completions
+      - if: build_platform == host_platform
+        then:
+          - mkdir ($prefix)/share/bash-completion/completions ($prefix)/share/fish/vendor_completions.d ($prefix)/share/zsh/site-functions
+          - let bin = $prefix | path join bin/air
+          - ^$bin generate-shell-completion bash | save ($prefix | path join share/bash-completion/completions/air)
+          - ^$bin generate-shell-completion fish | save ($prefix | path join share/fish/vendor_completions.d/air.fish)
+          - ^$bin generate-shell-completion zsh  | save ($prefix | path join share/zsh/site-functions/_air)
 
 requirements:
   build:
@@ -50,6 +41,7 @@ requirements:
     - ${{ compiler('rust') }}
     - cargo-auditable
     - cargo-bundle-licenses
+    - nushell
 
 tests:
   - script:
