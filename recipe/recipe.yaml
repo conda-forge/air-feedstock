@@ -29,10 +29,10 @@ build:
       - if: build_platform == host_platform
         then:
           - mkdir ($prefix)/share/bash-completion/completions ($prefix)/share/fish/vendor_completions.d ($prefix)/share/zsh/site-functions
-          - let bin = $prefix | path join bin/air
-          - ^$bin generate-shell-completion bash | save ($prefix | path join share/bash-completion/completions/air)
-          - ^$bin generate-shell-completion fish | save ($prefix | path join share/fish/vendor_completions.d/air.fish)
-          - ^$bin generate-shell-completion zsh  | save ($prefix | path join share/zsh/site-functions/_air)
+          - let bin = ($prefix)/bin/air
+          - ^$bin generate-shell-completion bash | save ($prefix)/share/bash-completion/completions/air
+          - ^$bin generate-shell-completion fish | save ($prefix)/share/fish/vendor_completions.d/air.fish
+          - ^$bin generate-shell-completion zsh  | save ($prefix)/share/zsh/site-functions/_air
 
 requirements:
   build:
